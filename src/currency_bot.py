@@ -14,7 +14,7 @@ from enum import Enum
 from schedule import Scheduler
 
 # API of the Currency Bot
-TOKEN = "576857231:AAHNRh1lacFO2ZZJ624ryJGuCmJ1AOB8FZs"
+TOKEN = "BOT API"
 
 # URL for accesing the API
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
