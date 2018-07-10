@@ -19,7 +19,7 @@ from sch_timer import setTimer
 
 
 # API of the Currency Bot
-TOKEN = "576857231:AAHNRh1lacFO2ZZJ624ryJGuCmJ1AOB8FZs"
+TOKEN = "BOT_API"
 
 # URL for accesing the API
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
