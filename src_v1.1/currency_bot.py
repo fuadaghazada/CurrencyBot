@@ -120,7 +120,7 @@ def getLastUpdateID(updates):
 # Updating process
 
 def update(updates):
-    
+
     for update in updates["result"]:
 
         if "text" in update["message"]:
