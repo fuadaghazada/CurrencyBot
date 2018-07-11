@@ -12,6 +12,7 @@ import requests
 import time
 import urllib
 import re
+import threading
 
 from currency_scraping import fetchCurrency
 #from location_scraping import findBank
@@ -27,7 +28,13 @@ URL = "https://api.telegram.org/bot{}/".format(TOKEN)
 # Variables
 currency = None
 user_location = {}
-last_chat_id = None
+buy_or_sell = []
+
+# Timer
+sch_state = None
+sch_currency = None
+sch_wait_time = None
+sch_chat_id = None
 
 # Access the URL and catch the content of the URL in UTF-8
 # @param: url - given url
@@ -113,17 +120,13 @@ def getLastUpdateID(updates):
 # Updating process
 
 def update(updates):
-
-    global last_chat_id
-
+    
     for update in updates["result"]:
 
         if "text" in update["message"]:
 
             text = update["message"]["text"]
             chat = update["message"]["chat"]["id"]
-
-            last_chat_id = chat
 
             checkCommands(text, chat)
 
@@ -146,8 +149,7 @@ def update(updates):
 def checkCommands(text, chat):
 
     global currency
-
-    buy_or_sell = []
+    global buy_or_sell
 
     if currency != None:
         buy_or_sell = ["I want to buy {}".format(currency), "I want to sell {}".format(currency)]
@@ -192,10 +194,6 @@ def checkCommands(text, chat):
 
         cmd_schedule_helper(currency, text, chat)
 
-        sendMessage("Time is up! I am here :)", chat)
-
-        cmd_best(currency, buy_or_sell, chat)
-
     #-------------------------------------------------------------------------
     else:
 
@@ -213,7 +211,6 @@ def checkCommands(text, chat):
 def cmd_best(currency, buy_or_sell, chat):
 
     if currency:
-
         if  fetchCurrency(currency) or fetchCurrency(currency, 1):
             b_or_s_keyboard = createKeyboard(buy_or_sell)
             sendMessage("Select an option: ", chat, b_or_s_keyboard)
@@ -316,6 +313,11 @@ def cmd_schedule(currency, chat):
 
 def cmd_schedule_helper(currency, text, chat):
 
+    global sch_state
+    global sch_currency
+    global sch_wait_time
+    global sch_chat_id
+
     if currency ==  None:
         sendMessage("You have not sent me any currency yet", chat)
         return
@@ -350,27 +352,56 @@ def cmd_schedule_helper(currency, text, chat):
 
     wait_seconds = days * 86400 + hours * 3600 + minutes * 60 + seconds
 
-    print("Waiting time: {} seconds".format(wait_seconds))
-
     sendMessage("I will inform you about {} in {}. Just wait for me :)".format(currency, resp), chat)
 
-    setTimer(wait_seconds)
+    sch_wait_time = wait_seconds
+    sch_currency = currency
+    sch_chat_id = chat
+    sch_state = True
+
+
+def updateTimerOnBackground():
+
+    global sch_state
+    global sch_currency
+    global sch_wait_time
+    global sch_chat_id
+    global buy_or_sell
+
+    while sch_state ==  None:
+        if sch_state:
+            print("True")
+            break
+
+    if sch_state:
+        if setTimer(sch_wait_time) == True:
+            buy_or_sell = ["I want to buy {}".format(currency), "I want to sell {}".format(currency)]
+            cmd_best(sch_currency, buy_or_sell, sch_chat_id)
+            sch_state = None
+            updateTimerOnBackground()
 
 
 # Main function for executing all BOT functions
 #
 def main():
 
-    last_update_id = None
+    def update_foreground():
+        last_update_id = None
 
-    while True:
-        updates = getUpdates(last_update_id)
+        while True:
+            updates = getUpdates(last_update_id)
 
-        if len(updates["result"]) > 0:
-            last_update_id = getLastUpdateID(updates) + 1
-            update(updates)
+            if len(updates["result"]) > 0:
+                last_update_id = getLastUpdateID(updates) + 1
+                update(updates)
 
-        time.sleep(0.5)
+            time.sleep(0.5)
+
+    foreground_thread = threading.Thread(name='foreground', target=update_foreground)
+    background_thread = threading.Thread(name='background', target=updateTimerOnBackground)
+
+    background_thread.start()
+    foreground_thread.start()
 
 
 if __name__ == "__main__":
