@@ -6,7 +6,6 @@ Created on Mon Jun 18 10:56:06 2018
 @author: fuadaghazada
 """
 
-import telegram
 import json
 import requests
 import time
@@ -15,15 +14,21 @@ import re
 import threading
 
 from currency_scraping import fetchCurrency
-#from location_scraping import findBank
 from sch_timer import setTimer
+
+from chat_tracking_db import create_table, add_chat, update_chat, get_elements
+from location_scraping import findNearestBranch
 
 
 # API of the Currency Bot
-TOKEN = "BOT_API"
+TOKEN = "576857231:AAHNRh1lacFO2ZZJ624ryJGuCmJ1AOB8FZs"
 
 # URL for accesing the API
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
+
+
+# database
+create_table()
 
 # Variables
 currency = None
@@ -99,7 +104,7 @@ def createKeyboard(items, location=False):
     if location ==  False:
         reply_markup = {"keyboard": keyboard, "one_time_keybaord": True}
     else:
-        reply_markup = {"keyboard": keyboard, "request_location": True, "one_time_keybaord": True}
+        reply_markup = {"keyboard": [[{"text": "Share my location", "request_location" : True}]], "one_time_keybaord": True}
 
     return json.dumps(reply_markup)
 
@@ -151,9 +156,12 @@ def checkCommands(text, chat):
     global currency
     global buy_or_sell
 
+    # Putting user requests in database
+    add_chat(chat)
+    currency = get_elements("currency", chat)[0]
+
     if currency != None:
         buy_or_sell = ["I want to buy {}".format(currency), "I want to sell {}".format(currency)]
-
 
     if text == '/start':
 
@@ -196,11 +204,11 @@ def checkCommands(text, chat):
 
     #-------------------------------------------------------------------------
     else:
-
         if re.match(r"[/](\w)+", text):
             sendMessage("Unknown command '{}'".format(text), chat)
         else:
-            currency = text
+            #currency = text
+            update_chat(chat, "currency", text)
     #-------------------------------------------------------------------------
 
 # Command best -- returns best rates according to the given currency
@@ -228,9 +236,9 @@ def cmd_best(currency, buy_or_sell, chat):
 def cmd_best_helper(currency, buy_or_sell, text, chat):
 
     if text == buy_or_sell[0]:
-        result = fetchCurrency(currency)
-    else:
         result = fetchCurrency(currency, 1)
+    else:
+        result = fetchCurrency(currency)
 
     if result:
 
@@ -248,19 +256,25 @@ def cmd_best_helper(currency, buy_or_sell, text, chat):
 
 def cmd_nearest(currency, chat):
 
-    location_keyboard = telegram.KeyboardButton(text="Send Location", request_location=True)
-    custom_keyboard = [[location_keyboard]]
-    reply_markup = telegram.ReplyKeyboardMarkup(custom_keyboard)
-
-    #reply_markup = createKeyboard(["Send me your location"], location = True)
+    reply_markup = createKeyboard(["Send me your location"], location = True)
 
     sendMessage("Can you share your location with me?", chat, reply_markup)
 
     if currency:
-        sendMessage("Nearest ATM for {} is in {}".format(currency, -1), chat)
+        if user_location:
 
-        #findBank("AccessBank Azerbaijan")
+            usr_lat = user_location["lat"]
+            usr_lng = user_location["lng"]
 
+            result = findNearestBranch(usr_lat, usr_lng)
+            branch_name = result["branch_name"]
+            branch_distance = result["branch_distance"]
+            branch_geo_loc = result["branch_geo_location"]
+
+            sendMessage("Nearest bank branch around you is {} and located {} km/s away from you".format(branch_name, branch_distance), chat)
+
+        else:
+            sendMessage("Could not find your location :(", chat)
     else:
         sendMessage("You have not sent me any currency yet", chat)
 
@@ -302,7 +316,7 @@ def cmd_help(chat):
 def cmd_schedule(currency, chat):
 
     if currency:
-        sendMessage("After how much do you want me to message you?\nHere is an example reply: 1 day 2 hours 1 minutes", chat)
+        sendMessage("After how much do you want me to message you?\nHere is an example reply: /schedule 1 day 2 hours 1 minutes", chat)
     else:
         sendMessage("You have not sent me any currency yet", chat)
 
@@ -352,6 +366,9 @@ def cmd_schedule_helper(currency, text, chat):
 
     wait_seconds = days * 86400 + hours * 3600 + minutes * 60 + seconds
 
+    # Due to 0.5 seconds delay on Telegram Updates
+    #wait_seconds = wait_seconds * 2
+
     sendMessage("I will inform you about {} in {}. Just wait for me :)".format(currency, resp), chat)
 
     sch_wait_time = wait_seconds
@@ -359,46 +376,79 @@ def cmd_schedule_helper(currency, text, chat):
     sch_chat_id = chat
     sch_state = True
 
+    # TODO: Updating the database
+    update_chat(chat, "schedule_state", sch_state)
+    update_chat(chat, "schedule_currency", sch_currency)
+    update_chat(chat, "schedule_wait_time", sch_wait_time)
 
-def updateTimerOnBackground():
+# Updates processes on background
+def update_background():
 
-    global sch_state
-    global sch_currency
-    global sch_wait_time
-    global sch_chat_id
-    global buy_or_sell
+    num_of_users = len(get_elements("chat_id"))
 
-    while sch_state ==  None:
+    def update_timer(): #sch_chat_id, sch_state, sch_currency, sch_wait_time
+
+        global sch_state
+        global sch_currency
+        global sch_wait_time
+        global sch_chat_id
+
+        while sch_state ==  None:
+            if sch_state:
+                break
+
         if sch_state:
-            print("True")
-            break
+            if setTimer(sch_wait_time) == True:
 
-    if sch_state:
-        if setTimer(sch_wait_time) == True:
-            buy_or_sell = ["I want to buy {}".format(currency), "I want to sell {}".format(currency)]
-            cmd_best(sch_currency, buy_or_sell, sch_chat_id)
-            sch_state = None
-            updateTimerOnBackground()
+                buy_or_sell = ["I want to buy {}".format(sch_currency), "I want to sell {}".format(sch_currency)]
+                cmd_best(sch_currency, buy_or_sell, sch_chat_id)
+                sch_state = None
 
+                update_chat(sch_chat_id, "schedule_state", None)
+                update_chat(sch_chat_id, "schedule_currency", None)
+                update_chat(sch_chat_id, "schedule_wait_time", None)
+
+                update_background()
+
+    update_timer()
+
+    # for i in range(0, num_of_users):
+    #     chat_id = get_elements("chat_id")[i]
+    #     sch_state = get_elements("schedule_state", chat_id)[0]
+    #     sch_currency = get_elements("schedule_currency", chat_id)[0]
+    #        sch_wait_time = get_elements("schedule_wait_time", chat_id)[0]
+    #
+    #     if sch_state == "1":
+    #         sch_wait_time = int(sch_wait_time)
+    #         a_thread = threading.Thread(name='updateTimer', target=update_timer(chat_id, sch_state, sch_currency, sch_wait_time))
+    #
+    #         a_thread.start()
+    #     else:
+    #         continue
+
+
+    #update_background()
+
+
+# Updates the processes on foreground
+def update_foreground():
+    last_update_id = None
+
+    while True:
+        updates = getUpdates(last_update_id)
+
+        if len(updates["result"]) > 0:
+            last_update_id = getLastUpdateID(updates) + 1
+            update(updates)
+
+        time.sleep(0.5)
 
 # Main function for executing all BOT functions
 #
 def main():
 
-    def update_foreground():
-        last_update_id = None
-
-        while True:
-            updates = getUpdates(last_update_id)
-
-            if len(updates["result"]) > 0:
-                last_update_id = getLastUpdateID(updates) + 1
-                update(updates)
-
-            time.sleep(0.5)
-
     foreground_thread = threading.Thread(name='foreground', target=update_foreground)
-    background_thread = threading.Thread(name='background', target=updateTimerOnBackground)
+    background_thread = threading.Thread(name='background', target=update_background)
 
     background_thread.start()
     foreground_thread.start()

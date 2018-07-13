@@ -6,79 +6,17 @@ Created on Mon Jul  9 11:04:04 2018
 @author: fuadaghazada
 """
 
-import requests
+
 import math
+from googleplaces import GooglePlaces, types, lang
+
+# Google Map API key
+API_KEY = 'GOOGLE_MAP_API'
 
 
-def findNearestBranch(usr_loc, branch_addresses):
-
-    distances = []
-
-    for addr in branch_addresses:
-
-        distance = findDistance(usr_loc = usr_loc, branch_loc = findBranch(addr))
-
-        if distance:
-            distances.append(distance)
-        else:
-            distances.append(math.inf)
-
-    nearest_dist = min(distances)
-    indexOFbranch = branch_addresses.index(nearest_dist)
-    branch_address = branch_addresses[indexOFbranch]
-
-    return {"name" : branch_address, "dist" : nearest_dist}
-
-
-def findDistance(usr_loc, branch_loc):
-
-    if branch_loc:
-        lat2 = branch_loc["lat"]
-        lng2 = branch_loc["lng"]
-
-        lat1 = branch_loc["lat"]
-        lng1 = branch_loc["lng"]
-
-        distance = calculateDistantceKM(lat1, lng1, lat2, lng2)
-
-        return distance
-    else:
-        return None
-
-
-def findBranch(branch_address):
-
-    response = requests.get('https://maps.googleapis.com/maps/api/geocode/json?address={}&sensor=false'.format(branch_address))
-
-    resp_json_payload = response.json()
-
-    results = resp_json_payload['results']
-
-    if len(results) == 0:
-        return None
-    else:
-        return results[0]['geometry']['location']
-
-
-def findBanksNearby(usr_lat, usr_lng):
-
-    loc = "location={},{}".format(usr_lat, usr_lng)
-    rad = "&radius={}".format(5000)
-    type = "&types=restaurant"
-    sensor = "&sensor=true"
-    key = "&key=AIzaSyDC4ketwopWVFq9LKrvAcCPcCBrKJewDj4"
-
-    response = requests.get("https://maps.googleapis.com/maps/api/place/nearbysearch/json?{}{}{}{}{}".format(loc, rad, type, sensor, key))
-
-    resp_json_payload = response.json()
-
-    results = resp_json_payload['results']
-
-    for result in results:
-        print(result['geometry']['location'])
-        print(result['formatted_address'])
-
-
+# Calculates distance between two lat-s and two long-s in KM using Haversine formula
+# @return d: distance in KM
+#
 def calculateDistantceKM(latitude1, longitude1, latitude2, longitude2):
 
     """
@@ -104,31 +42,82 @@ def calculateDistantceKM(latitude1, longitude1, latitude2, longitude2):
 
     return d
 
+# Finds nearby places to the given latitude and longitude in the given radius
+# @param usr_lat: Latitude of the user
+# @param usr_lng: Longitude of teh user
+# @param radius: given radius
+
+def findNearbyBranches(usr_lat, usr_lng, search_radius):
+
+    if usr_lat == None or usr_lng ==  None:
+        return None
+
+    try:
+        branches = []
+
+        google_places = GooglePlaces(API_KEY)
+
+        query_result = google_places.nearby_search(
+                lat_lng = {'lat': usr_lat, 'lng': usr_lng},
+                keyword = 'Banks',
+                radius = search_radius,
+                types = [types.TYPE_BANK])
+
+        if query_result.has_attributions:
+            print (query_result.html_attributions)
+
+        for place in query_result.places:
+
+            branch_name = place.name
+
+            branch_geo_loc = place.geo_location
+            branch_lat = float(branch_geo_loc["lat"])
+            branch_lng = float(branch_geo_loc["lng"])
+
+            distance = calculateDistantceKM(usr_lat, usr_lng, branch_lat, branch_lng)
+            distance = math.ceil(distance * 1000) / 1000
+
+            # Putting result in a list of tuples
+            result = (branch_name, branch_geo_loc, distance)
+
+            branches.append(result)
+
+    except Exception as e:
+        print(e)
+        return None
+
+    # Returing the list of branches in given radius
+    return branches
 
 
+# Finds the nearest branch according to the given radius and location
+# @param usr_lat: Latitude of the user location
+# @param usr_lng: Longitude of the user location
+# @param radius: Raduis of of search
 
-my_location = {"lat" : 40.3880373, "lng" : 49.8263347}
+def findNearestBranch(usr_lat, usr_lng, radius = 1000):
 
-#print(findBank("Yasamal rayounu, Xidir Mustafayev"))
-#findBanksNearby(usr_lat = 40.3880373, usr_lng = 49.8263347)
-#findBanksNearby(usr_lat = 37.77657, usr_lng = -122.417506)
-#print(findBank("Bakı şəh., Şərifzadə küç. 75A"))
+    branches = findNearbyBranches(usr_lat, usr_lng, radius)
 
-#print(findDistance(usr_loc = my_location, bank_loc = findBranch("Bakı şəh., Neftçilər pr. 67")))
+    if branches == None:
+        return None
 
-list_of_br_addrs = ["Bakı şəh., Alı Mustafayev küç., 1c, AZ 1111",
-                    "Bakı şəh., Azadlıq pr., 97, AZ 1000",
-                    "Bakı şəh., Babek pr. 76c, AZ 1030",
-                    "Bakı şəh., Badamdar qəsəbəsi, 1-ci Yaşayış Massivi, Badamdar şossesi, ev 34, AZ1023",
-                    "Bakı şəh., M. Fətəliyev küc. 70, AZ 1132",
-                    "Bakı şəh., Əlövsət Quliyev küç., 137, AZ 1000",
-                    "Bakı şəh., Şövkət Məmmədova küç. 91, AZ1000",
-                    "Bakı şəh., Bül-Bül pr. 33, AZ 1022",
-                    "Bərdə şəh., İsmət Qayıbov küç., 8A, AZ0900",
-                    "Cəlilabad şəh., H.Əliyev pr., 4, AZ1500",
-                    "Bakı şəh., Inşaatçılar pr., 4a, AZ 1073",
-                    "Göyçay şəh., H.Əliyev prospekti 96, AZ2300",
-                    "Gəncə şəh. M.A.Abbaszadə küç. 32, AZ2000"
-]
+    branch_names = []
+    branch_geo_locs = []
+    distances = []
 
-print(findNearestBranch(usr_loc = my_location, branch_addresses = list_of_br_addrs))
+    for branch in branches:
+        branch_names.append(branch[0])
+        branch_geo_locs.append(branch[1])
+        distances.append(branch[2])
+
+    if len(distances) == 0:
+        radius_ = radius
+        return findNearestBranch(usr_lat, usr_lng, radius_ + 1000)
+    else:
+        nearest_distance = min(distances)
+        index_of_nearest = distances.index(nearest_distance)
+        nearest_branch_name = branch_names[index_of_nearest]
+        nearest_branch_geo_loc = branch_geo_locs[index_of_nearest]
+
+        return {"branch_name" : nearest_branch_name, "branch_distance" : nearest_distance, "branch_geo_location" : nearest_branch_geo_loc}
