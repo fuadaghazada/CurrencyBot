@@ -15,13 +15,12 @@ import threading
 
 from currency_scraping import fetchCurrency
 from sch_timer import setTimer
-
 from chat_tracking_db import create_table, add_chat, update_chat, get_elements
 from location_scraping import findNearestBranch
 
 
 # API of the Currency Bot
-TOKEN = "576857231:AAHNRh1lacFO2ZZJ624ryJGuCmJ1AOB8FZs"
+TOKEN = "BOT_API"
 
 # URL for accesing the API
 URL = "https://api.telegram.org/bot{}/".format(TOKEN)
@@ -92,6 +91,18 @@ def sendMessage(text, chat_id, reply_markup = None):
         url += "&reply_markup={}".format(reply_markup)
 
     getURL(url)
+
+# For sending location from Bot API
+# @param lat: latitude of the location
+# @param lng: longitude of the location
+# @param chat_id: ID for the receiver
+
+def sendLocation(lat, lng, chat_id):
+
+    url = URL + "sendlocation?chat_id={}&latitude={}&longitude={}".format(chat_id, lat, lng)
+
+    getURL(url)
+
 
 # Creates a custom keyboard with the given items
 # @param: items - keyboard items
@@ -267,11 +278,19 @@ def cmd_nearest(currency, chat):
             usr_lng = user_location["lng"]
 
             result = findNearestBranch(usr_lat, usr_lng)
-            branch_name = result["branch_name"]
-            branch_distance = result["branch_distance"]
-            branch_geo_loc = result["branch_geo_location"]
 
-            sendMessage("Nearest bank branch around you is {} and located {} km/s away from you".format(branch_name, branch_distance), chat)
+            if result:
+                branch_name = result["branch_name"]
+                branch_distance = result["branch_distance"]
+                branch_geo_loc = result["branch_geo_location"]
+
+                branch_lat = branch_geo_loc["lat"]
+                branch_lng = branch_geo_loc["lng"]
+
+                sendLocation(branch_lat, branch_lng, chat)
+                sendMessage("Nearest bank branch around you is {} and located {} kms away from you".format(branch_name, branch_distance), chat)
+            else:
+                sendMessage("Could not find any branches :(", chat)
 
         else:
             sendMessage("Could not find your location :(", chat)
