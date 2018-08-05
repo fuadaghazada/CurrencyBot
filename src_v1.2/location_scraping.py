@@ -104,11 +104,7 @@ def findNearestBranchOfBank(usr_lat, usr_lng, bank_name):
         return None
 
     try:
-        print("point1")
-
         google_places = GooglePlaces(API_KEY)
-
-        print("point2")
 
         # List of autocompletion of Google Maps
         predictions = google_places.autocomplete(input = str(bank_name), lat_lng = {'lat': usr_lat, 'lng': usr_lng})._predictions
@@ -117,11 +113,7 @@ def findNearestBranchOfBank(usr_lat, usr_lng, bank_name):
         branch_geo_locs = []
         distances = []
 
-        print("point3")
-
         for prediction in predictions:
-
-            print("point4")
 
             place = google_places.get_place(prediction._place_id)
             branch_names.append(place._name)
