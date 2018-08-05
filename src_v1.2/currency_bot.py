@@ -456,7 +456,7 @@ def update_foreground():
             last_update_id = getLastUpdateID(updates) + 1
             update(updates)
 
-        time.sleep(1)
+        time.sleep(0.5)
 
 # Main function for executing all BOT functions
 #
