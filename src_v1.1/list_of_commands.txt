@@ -1,5 +1,0 @@
-/help##gives information about how to use the chatbot
-/list##lists all the existing commands
-/best##displays the most useful currency data according to the latest currency input of the user 
-/nearest##lists the nearest banks branches according to the latest currency input of the user
-/schedule##schedules for informing the user with information about the latest currency input that he/she entered by asking time for informing
