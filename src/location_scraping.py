@@ -62,7 +62,7 @@ def findNearbyBranches(usr_lat, usr_lng, search_radius):
 
         query_result = google_places.nearby_search(
                 lat_lng = {'lat': usr_lat, 'lng': usr_lng},
-                keyword = 'Banks',
+                keyword = 'Bank',
                 radius = search_radius,
                 types = [types.TYPE_BANK])
 
@@ -109,6 +109,8 @@ def findNearestBranchOfBank(usr_lat, usr_lng, bank_name):
         # List of autocompletion of Google Maps
         predictions = google_places.autocomplete(input = str(bank_name), lat_lng = {'lat': usr_lat, 'lng': usr_lng})._predictions
 
+        #print(predictions)
+
         branch_names = []
         branch_geo_locs = []
         distances = []
@@ -145,11 +147,12 @@ def findNearestBranchOfBank(usr_lat, usr_lng, bank_name):
 # @param usr_lng: Longitude of the user location
 # @param radius: Raduis of of search
 
-def findNearestBranch(usr_lat, usr_lng, radius = 1000):
+def findNearestBranch(usr_lat, usr_lng, radius = 5000):
 
     branches = findNearbyBranches(usr_lat, usr_lng, radius)
 
     if branches == None:
+        print("No bank branch is found in radius of 10 km")
         return None
 
     branch_names = []
@@ -161,19 +164,19 @@ def findNearestBranch(usr_lat, usr_lng, radius = 1000):
         branch_geo_locs.append(branch[1])
         distances.append(branch[2])
 
-    if len(distances) == 0:
-        return findNearestBranch(usr_lat, usr_lng, radius + 1000)
+    # if len(distances) == 0:
+    #     return findNearestBranch(usr_lat, usr_lng, radius + 1000)
+    #
+    # elif len(distances) == 0 and radius >= 5000:
+    #     print("No bank branch is found in radius of 10 km")
+    #     return False
+    # else:
+    nearest_distance = min(distances)
+    index_of_nearest = distances.index(nearest_distance)
+    nearest_branch_name = branch_names[index_of_nearest]
+    nearest_branch_geo_loc = branch_geo_locs[index_of_nearest]
 
-    elif len(distances) == 0 and radius >= 5000:
-        print("No bank branch is found in radius of 10 km")
-        return False
-    else:
-        nearest_distance = min(distances)
-        index_of_nearest = distances.index(nearest_distance)
-        nearest_branch_name = branch_names[index_of_nearest]
-        nearest_branch_geo_loc = branch_geo_locs[index_of_nearest]
-
-        return {"branch_name" : nearest_branch_name, "branch_distance" : nearest_distance, "branch_geo_location" : nearest_branch_geo_loc}
+    return {"branch_name" : nearest_branch_name, "branch_distance" : nearest_distance, "branch_geo_location" : nearest_branch_geo_loc}
 
 
 #print(findNearestBranch(40.397922, 49.800599, "ASB"))

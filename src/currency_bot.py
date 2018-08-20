@@ -295,8 +295,6 @@ def cmd_best_helper(currency, buy_or_sell, text, chat):
         bank_name = result[1]
 
         sendMessage("Best Choice for {} {} is {} in {}".format(currency, buy_sell, rate, bank_name), chat)
-
-        # cmd_best_share_location(bank_name, chat)
     else:
         sendMessage("I could not find anything about {} :(".format(currency), chat)
 
@@ -414,7 +412,7 @@ def cmd_help(chat):
 def cmd_schedule(currency, chat):
 
     if currency:
-        sendMessage("After how much do you want me to message you?\nHere is an example reply: /schedule 1 day 2 hours 1 minutes", chat)
+        sendMessage("When do you want me to message you?\nHere is an example reply: /schedule 9:00", chat)
     else:
         sendMessage("You have not sent me any currency yet", chat)
 
