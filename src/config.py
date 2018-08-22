@@ -1,5 +1,0 @@
-# Telegram Currency bot Token
-BOT_TOKEN = "576857231:AAHNRh1lacFO2ZZJ624ryJGuCmJ1AOB8FZs"
-
-# Google API key
-API_KEY = 'AIzaSyCsCOLoeR5-TMFicx0YgYYYJIuHS0SmG7Q'
