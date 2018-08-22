@@ -11,7 +11,7 @@ cron = CronTab(user=True)
 
 def schedule_cron(currency, chat_id, sch_data):
 
-    job = cron.new(command='/anaconda3/bin/python3 /Users/fuadaghazada/Library/Mobile\ Documents/com\~apple\~CloudDocs/Summer/CurrencyBot/start_again\:/send_scheduled_message.py {} {}'.format(chat_id, currency))
+    job = cron.new(command='/usr/bin/python3 /root/CurrencyBot/CurrencyBot/src/send_scheduled_message.py {} {}'.format(chat_id, currency))
 
     hours = sch_data["hour"]
     minutes = sch_data["minute"]

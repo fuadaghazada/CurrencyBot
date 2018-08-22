@@ -343,7 +343,12 @@ def cmd_best_share_location(bank_name, chat):
 
 def cmd_nearest(currency, chat):
 
-    location = get_elements("location", chat)[0]
+    location = None
+
+    if get_elements("location", chat):
+        location = get_elements("location", chat)[0]
+    else:
+        sendMessage("Could not find your location :( If you want to share your location first just type '/updateLocation' then try your command again.", chat)
 
     if location:
          user_location["lat"] = float(location.split("-")[0])

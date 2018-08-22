@@ -28,7 +28,7 @@ def create_table():
 
         sql_stmt = """
                     CREATE TABLE IF NOT EXISTS chat_info
-                    (chat_id TEXT PRIMARY KEY, currency TEXT, schedule_state TEXT, schedule_currency TEXT, schedule_wait_time TEXT)
+                    (chat_id TEXT PRIMARY KEY, currency TEXT, location TEXT)
                    """
         #sql_chat_index = "CREATE INDEX IF NOT EXISTS chat_id_index ON chat_info (chat_id ASC)"
 
@@ -46,8 +46,8 @@ def add_chat(chat_id):
         connection = connect()
 
         sql_stmt = """
-                    INSERT INTO chat_info (chat_id, currency, schedule_state, schedule_currency, schedule_wait_time)
-                    VALUES ((?), null, null, null, null)
+                    INSERT INTO chat_info (chat_id, currency, location)
+                    VALUES ((?), null, null)
                    """
         args = (chat_id,)
         connection.execute(sql_stmt, args)
