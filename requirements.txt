@@ -1,5 +1,5 @@
 selenium==3.141.0
 beautifulsoup4==4.7.1
-requests==2.19.1
+requests==2.20.0
 Flask==1.1.1
 Flask-Cors==3.0.8
